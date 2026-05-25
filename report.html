@@ -105,7 +105,7 @@
             z-index: 1;
         }
 
-        /* แผนที่แบบดาร์กโหมดเบื้องต้น */
+        /* แผนที่แบบดาร์กโหมด */
         .leaflet-layer,
         .leaflet-control-zoom-in,
         .leaflet-control-zoom-out,
@@ -113,7 +113,7 @@
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
         .leaflet-popup-content {
-            color: #000; /* ให้ข้อความป๊อปอัปอ่านง่าย */
+            color: #000; 
             font-family: 'Prompt', sans-serif;
         }
 
@@ -202,7 +202,7 @@
 
     <div class="dashboard-container" id="appContent">
         <div class="loading" id="loadingState">
-            ⏳ กำลังโหลดข้อมูลและจัดเตรียมแผนที่...
+            ⏳ กำลังโหลดข้อมูลและจัดเตรียมแผนที่เมืองขอนแก่น...
         </div>
 
         <div id="dashboardData" style="display: none;">
@@ -259,7 +259,7 @@
         import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
 
-        // Firebase Config ของคุณ (suchartstudio-9a78d)
+        // Firebase Config ของโปรเจกต์ suchartstudio-9a78d
         const firebaseConfig = {
             apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -279,10 +279,10 @@
         let map;
         let markerLayers = [];
 
-        // ฟังก์ชันสร้างและตั้งค่าแผนที่เริ่มต้น
+        // ฟังก์ชันสร้างและตั้งค่าแผนที่เริ่มต้น (เริ่มต้น Zoom ไปที่เมืองขอนแก่น)
         function initMap() {
-            // ตั้งพิกัดศูนย์กลางเริ่มต้นที่ ขอนแก่น (Khon Kaen)
-            map = L.map('map').setView([16.4322, 102.8236], 14);
+            // ตั้งพิกัดศูนย์กลางเริ่มต้นที่ ตัวเมืองขอนแก่น (16.4322, 102.8236) และตั้งระดับการซูมเริ่มต้นเป็น 15 (เห็นพื้นที่ในเมืองชัดเจน)
+            map = L.map('map').setView([16.4322, 102.8236], 15);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
@@ -304,7 +304,7 @@
             try {
                 if (!map) initMap();
 
-                // ล้างหมุดเดิมบนแผนที่ออกก่อน (ถ้ามี)
+                // ล้างหมุดเดิมบนแผนที่ออกก่อน
                 markerLayers.forEach(layer => map.removeLayer(layer));
                 markerLayers = [];
 
@@ -334,7 +334,7 @@
                 const checkinsSnap = await getDocs(collection(db, "checkins"));
                 document.getElementById('totalCheckins').innerText = checkinsSnap.size;
 
-                // วาดพิกัดจุดเช็คอินลงแผนที่ (วงกลมสีเขียว) และจัดกลุ่มทำสถิติลงตาราง
+                // วาดพิกัดจุดเช็คอินลงแผนที่ (วงกลมสีเขียว)
                 const locationStats = {};
                 
                 checkinsSnap.forEach((documentSnapshot) => {
@@ -367,9 +367,10 @@
                     }
                 });
 
-                // ปรับมุมมองแผนที่ให้ครอบคลุมทุกหมุดที่มีในระบบโดยอัตโนมัติ
+                // ปรับมุมมองแผนที่อัตโนมัติเฉพาะเมื่อมีหมุดอยู่นอกระยะเริ่มต้นขอนแก่น
                 if (markerLayers.length > 0) {
                     const group = new L.featureGroup(markerLayers);
+                    // สั่งฟิตมุมมองตามหมุดที่มี โดยเว้นระยะ padding ป้องกันหมุดหลุดขอบหน้าจอ
                     map.fitBounds(group.getBounds().pad(0.1));
                 }
 
@@ -398,7 +399,7 @@
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('dashboardData').style.display = 'block';
                 
-                // สั่งให้ Leaflet คำนวณขนาดกล่องแผนที่ใหม่อีกครั้งหลังจากเปลี่ยนการซ่อนรูป element
+                // คำนวณขนาดกล่องแผนที่ใหม่อีกครั้งหลังจากเปิดการซ่อนรูป element เพื่อให้ทำงานร่วมกับซูมเริ่มต้นได้สมบูรณ์
                 setTimeout(() => { map.invalidateSize(); }, 200);
 
             } catch (error) {
@@ -411,7 +412,7 @@
         async function resetAllData() {
             const isConfirmed = confirm(
                 "⚠️ คำเตือนอันตรายระดับสูง!\n\n" +
-                "คุณกำลังจะลบข้อมูลประวัติพิกัดและการเช็คอินของผู้ใช้ทั้งหมดออกจากฐานข้อมูลโปรเจกต์ใหม่นี้\n\n" +
+                "คุณกำลังจะลบข้อมูลประวัติพิกัดและการเช็คอินของผู้ใช้ทั้งหมดออกจากฐานข้อมูลโปรเจกต์นี้\n\n" +
                 "ข้อมูลที่ถูกลบแล้วจะไม่สามารถกู้คืนกลับมาได้อีก คุณแน่ใจหรือไม่ที่จะดำเนินการต่อ?"
             );
 
@@ -444,7 +445,7 @@
             }
         }
 
-        // ผูกสัญญานอีเวนต์เข้ากับปุ่มล้างข้อมูล
+        // ผูกสัญญาณอีเวนต์เข้ากับปุ่มล้างข้อมูล
         document.getElementById('resetBtn').addEventListener('click', resetAllData);
 
         // สั่งโหลดข้อมูลแดชบอร์ดทันทีเมื่อเบราว์เซอร์พร้อมใช้งาน

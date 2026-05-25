@@ -259,7 +259,7 @@
         import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
 
-        // Firebase Config ของโปรเจกต์ suchartstudio-9a78d
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
             authDomain: "suchartstudio-9a78d.firebaseapp.com",
@@ -279,9 +279,9 @@
         let map;
         let markerLayers = [];
 
-        // ฟังก์ชันสร้างและตั้งค่าแผนที่เริ่มต้น (เริ่มต้น Zoom ไปที่เมืองขอนแก่น)
+        // ฟังก์ชันสร้างและตั้งค่าแผนที่เริ่มต้น
         function initMap() {
-            // ตั้งพิกัดศูนย์กลางเริ่มต้นที่ ตัวเมืองขอนแก่น (16.4322, 102.8236) และตั้งระดับการซูมเริ่มต้นเป็น 15 (เห็นพื้นที่ในเมืองชัดเจน)
+            // ตั้งค่าพิกัดศูนย์กลางไปที่เมืองขอนแก่น ซูมระดับ 15
             map = L.map('map').setView([16.4322, 102.8236], 15);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -308,7 +308,7 @@
                 markerLayers.forEach(layer => map.removeLayer(layer));
                 markerLayers = [];
 
-                // 1. ดึงข้อมูล Sessions (ผู้ใช้ทั้งหมด)
+                // 1. ดึงข้อมูล Sessions
                 const visitorsSnap = await getDocs(collection(db, "visitor_logs"));
                 document.getElementById('totalVisitors').innerText = visitorsSnap.size;
 
@@ -330,7 +330,7 @@
                     }
                 });
 
-                // 2. ดึงข้อมูล Check-ins (การเช็คอินสถานที่)
+                // 2. ดึงข้อมูล Check-ins
                 const checkinsSnap = await getDocs(collection(db, "checkins"));
                 document.getElementById('totalCheckins').innerText = checkinsSnap.size;
 
@@ -342,7 +342,6 @@
                     const locName = data.location_name || "ไม่ระบุชื่อสถานที่";
                     const timestamp = data.timestamp;
 
-                    // บันทึกสถิติลง Object ตาราง
                     if (!locationStats[locName]) {
                         locationStats[locName] = { count: 0, latestTime: timestamp };
                     }
@@ -367,12 +366,10 @@
                     }
                 });
 
-                // ปรับมุมมองแผนที่อัตโนมัติเฉพาะเมื่อมีหมุดอยู่นอกระยะเริ่มต้นขอนแก่น
-                if (markerLayers.length > 0) {
-                    const group = new L.featureGroup(markerLayers);
-                    // สั่งฟิตมุมมองตามหมุดที่มี โดยเว้นระยะ padding ป้องกันหมุดหลุดขอบหน้าจอ
-                    map.fitBounds(group.getBounds().pad(0.1));
-                }
+                // --- ปรับปรุงตรงส่วนนี้ใหม่ ---
+                // บังคับล็อกพิกัดแผนที่กลับมาโฟกัสที่ใจกลางเมืองขอนแก่น [16.4322, 102.8236] ซูมระดับ 15 เสมอ
+                // วิธีนี้จะช่วยแก้ปัญหากรณีที่มีหมุดทดสอบอยู่พิกัดอื่นแล้วระบบดึงจอหนีออกไป
+                map.setView([16.4322, 102.8236], 15);
 
                 // 3. สร้างแถวข้อมูลสถิติในตาราง
                 const tbody = document.getElementById('checkinTableBody');
@@ -395,11 +392,11 @@
                     });
                 }
 
-                // ปิดสถานะโหลดเดอร์และแสดงหน้าต่างแดชบอร์ดจริง
+                // ปิดสถานะโหลดเดอร์และแสดงแดชบอร์ดจริง
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('dashboardData').style.display = 'block';
                 
-                // คำนวณขนาดกล่องแผนที่ใหม่อีกครั้งหลังจากเปิดการซ่อนรูป element เพื่อให้ทำงานร่วมกับซูมเริ่มต้นได้สมบูรณ์
+                // สั่งประมวลผลขนาดกล่องแผนที่ซ้ำอีกครั้งป้องกันการแสดงผลเพี้ยนตอนเปลี่ยนสถานะการซ่อน Element
                 setTimeout(() => { map.invalidateSize(); }, 200);
 
             } catch (error) {

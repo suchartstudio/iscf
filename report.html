@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Khon Kaen Smart Guide</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
-            --primary: #ff7043;
+            --primary: #22b800;
+            --danger: #e53935;
             --text-main: #e0e0e0;
+            --text-muted: #aaaaaa;
         }
 
         body {
@@ -24,96 +27,184 @@
             padding: 20px;
         }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--primary);
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-        }
-
-        #map {
-            height: 400px;
-            width: 100%;
-            border-radius: 10px;
-        }
-
-        .stat-val {
-            font-size: 32px;
-            font-weight: 600;
-            color: #fff;
-        }
-
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        /* สำหรับหน้าจอใหญ่ ให้แผนที่กินพื้นที่ 2 คอลัมน์ */
-        .wide-card {
-            grid-column: span 2;
+        .header h1 {
+            font-family: 'Chakra Petch', sans-serif;
+            color: #ffffff;
+            margin: 0 0 10px 0;
+            font-size: 36px;
         }
 
-        @media (max-width: 768px) {
-            .wide-card { grid-column: span 1; }
+        .dashboard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .card .value {
+            font-size: 40px;
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        .table-container h2 {
+            margin-top: 0;
+            font-family: 'Chakra Petch', sans-serif;
+            color: #fff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            color: var(--primary);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Reset Section */
+        .reset-section {
+            text-align: right;
+            padding: 20px 0;
+            border-top: 1px dashed #444;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(229, 57, 53, 0.3);
+        }
+
+        .btn-danger:hover {
+            background-color: #c62828;
+        }
+
+        .btn-danger:active {
+            transform: scale(0.98);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 20px;
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Visitor Analytics Dashboard</h1>
-        <p>ข้อมูลการเข้าชมและพิกัดผู้ใช้งานระบบ</p>
+        <h1>📊 ระบบรายงานผลนิทรรศการ</h1>
+        <p>Khon Kaen Smart Guide - Dashboard</p>
     </div>
 
-    <div class="dashboard-grid">
-        <div class="card">
-            <div class="card-title">สรุปข้อมูลทั่วไป</div>
-            <p>จำนวนผู้เข้าใช้งานทั้งหมด</p>
-            <div id="totalVisitors" class="stat-val">0</div>
-            <p style="margin-top:20px">ระยะเวลาใช้งานเฉลี่ย (นาที)</p>
-            <div id="avgDuration" class="stat-val">0</div>
+    <div class="dashboard-container" id="appContent">
+        <div class="loading" id="loadingState">
+            ⏳ กำลังโหลดข้อมูลจากฐานข้อมูล...
         </div>
 
-        <div class="card">
-            <div class="card-title">อุปกรณ์ที่ใช้งาน (Browsers)</div>
-            <canvas id="deviceChart"></canvas>
-        </div>
+        <div id="dashboardData" style="display: none;">
+            
+            <div class="summary-grid">
+                <div class="card">
+                    <h3>ผู้ใช้งานระบบทั้งหมด (Sessions)</h3>
+                    <p class="value" id="totalVisitors">0</p>
+                </div>
+                <div class="card">
+                    <h3>ยอดการเช็คอินรวม (ครั้ง)</h3>
+                    <p class="value" id="totalCheckins">0</p>
+                </div>
+            </div>
 
-        <div class="card wide-card">
-            <div class="card-title">แผนที่พิกัดผู้ใช้งานล่าสุด</div>
-            <div id="map"></div>
-        </div>
+            <div class="table-container">
+                <h2>📍 สถิติการเข้าชมแบ่งตามสถานที่</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ลำดับ</th>
+                            <th>ชื่อสถานที่จัดแสดง</th>
+                            <th style="text-align: center;">จำนวนการเช็คอิน (คน)</th>
+                            <th>อัปเดตล่าสุดเมื่อ (วัน-เวลา)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checkinTableBody">
+                        </tbody>
+                </table>
+            </div>
 
-        <div class="card wide-card">
-            <div class="card-title">สถิติการเข้าใช้งานรายวัน</div>
-            <canvas id="timeChart" height="100"></canvas>
+            <div class="reset-section">
+                <button class="btn-danger" id="resetBtn">⚠️ ลบข้อมูลรายงานทั้งหมด</button>
+            </div>
+
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
+        // Firebase Config ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyCJ-E8bN9nz_BWKTNofz7ccuVoo6m8LyAU",
             authDomain: "suchart-915bd.firebaseapp.com",
@@ -124,120 +215,129 @@
             measurementId: "G-2LNYQS3M52"
         };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ตั้งค่าแผนที่ Leaflet
-        const map = L.map('map').setView([16.4322, 102.8236], 13); // กลางขอนแก่น
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
-
-        async function loadDashboardData() {
-            const querySnapshot = await getDocs(collection(db, "visitor_logs"));
-            const data = [];
-            querySnapshot.forEach((doc) => data.push(doc.data()));
-
-            updateStats(data);
-            renderDeviceChart(data);
-            renderTimeChart(data);
-            renderMapMarkers(data);
+        // แปลงรูปแบบวันที่ให้อ่านง่าย
+        function formatDate(isoString) {
+            if (!isoString) return "-";
+            const date = new Date(isoString);
+            return date.toLocaleString('th-TH', { 
+                year: 'numeric', month: 'short', day: 'numeric', 
+                hour: '2-digit', minute: '2-digit' 
+            });
         }
 
-        // 1. อัปเดตตัวเลขสถิติ
-       function updateStats(data) {
-    document.getElementById('totalVisitors').innerText = data.length;
-    
-    // ถ้ายังไม่มีคนเข้าใช้งานเลย ให้แสดง 0
-    if (data.length === 0) {
-        document.getElementById('avgDuration').innerText = "0.0";
-        return;
-    }
+        // โหลดข้อมูลและแสดงผลบน Dashboard
+        async function loadDashboard() {
+            try {
+                // 1. ดึงข้อมูล Sessions (ผู้ใช้ทั้งหมด)
+                const visitorsSnap = await getDocs(collection(db, "visitor_logs"));
+                document.getElementById('totalVisitors').innerText = visitorsSnap.size;
 
-    // รวมเวลาทั้งหมด (หน่วยเป็นวินาที)
-    const totalSeconds = data.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0);
-    
-    // หาค่าเฉลี่ยเป็นวินาที
-    const avgSeconds = totalSeconds / data.length;
-    
-    // แปลงวินาทีเป็นนาที (หาร 60)
-    const avgMinutes = avgSeconds / 60;
-    
-    // แสดงผลทศนิยม 1 ตำแหน่ง (เช่น 1.5 นาที)
-    document.getElementById('avgDuration').innerText = avgMinutes.toFixed(1);
-}
+                // 2. ดึงข้อมูล Check-ins (การเช็คอินสถานที่)
+                const checkinsSnap = await getDocs(collection(db, "checkins"));
+                document.getElementById('totalCheckins').innerText = checkinsSnap.size;
 
-        // 2. แผนที่แสดงจุดที่ผู้ใช้อยู่
-        function renderMapMarkers(data) {
-            data.forEach(item => {
-                if (item.last_lat && item.last_lng) {
-                    L.circleMarker([item.last_lat, item.last_lng], {
-                        radius: 8,
-                        fillColor: "#ff7043",
-                        color: "#fff",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    }).addTo(map).bindPopup(`อุปกรณ์: ${item.device_info.split(')')[0] + ')'}`);
+                // 3. จัดกลุ่มข้อมูลการเช็คอินตามชื่อสถานที่
+                const locationStats = {};
+                
+                checkinsSnap.forEach((documentSnapshot) => {
+                    const data = documentSnapshot.data();
+                    const locName = data.location_name || "ไม่ระบุชื่อสถานที่";
+                    const timestamp = data.timestamp;
+
+                    if (!locationStats[locName]) {
+                        locationStats[locName] = {
+                            count: 0,
+                            latestTime: timestamp
+                        };
+                    }
+
+                    locationStats[locName].count += 1;
+                    
+                    // หาเวลาที่ใหม่ที่สุด
+                    if (new Date(timestamp) > new Date(locationStats[locName].latestTime)) {
+                        locationStats[locName].latestTime = timestamp;
+                    }
+                });
+
+                // 4. สร้างแถวข้อมูลในตาราง
+                const tbody = document.getElementById('checkinTableBody');
+                tbody.innerHTML = ''; // ล้างค่าเดิม
+                
+                // แปลง Object เป็น Array เพื่อเอามาเรียงลำดับ (เรียงตามยอดเช็คอินเยอะสุด)
+                const sortedLocations = Object.entries(locationStats).sort((a, b) => b[1].count - a[1].count);
+
+                if (sortedLocations.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #888;">ยังไม่มีข้อมูลการเช็คอินในขณะนี้</td></tr>`;
+                } else {
+                    sortedLocations.forEach(([name, stats], index) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${name}</td>
+                            <td style="text-align: center; color: #ffcc80; font-weight: bold; font-size: 18px;">${stats.count}</td>
+                            <td style="color: #a5d6a7;">${formatDate(stats.latestTime)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
                 }
-            });
+
+                // ปิดโหลดเดอร์และแสดงหน้าต่างจริง
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('dashboardData').style.display = 'block';
+
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+                document.getElementById('loadingState').innerText = "❌ เกิดข้อผิดพลาดในการดึงข้อมูล กรุณารีเฟรชหน้าเว็บ";
+            }
         }
 
-        // 3. กราฟอุปกรณ์ (Pie Chart)
-        function renderDeviceChart(data) {
-            const devices = {};
-            data.forEach(item => {
-                const name = item.device_info.includes("Mobi") ? "Mobile" : "Desktop";
-                devices[name] = (devices[name] || 0) + 1;
-            });
+        // ฟังก์ชันลบข้อมูลทั้งหมด
+        async function resetAllData() {
+            // หน้าต่างแจ้งเตือน (Confirmation Dialog)
+            const isConfirmed = confirm(
+                "⚠️ คำเตือนอันตราย!\n\n" +
+                "คุณกำลังจะลบข้อมูลประวัติการใช้งานและการเช็คอิน 'ทั้งหมด' ออกจากฐานข้อมูล\n\n" +
+                "ข้อมูลที่ถูกลบไปแล้วจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่ที่จะดำเนินการต่อ?"
+            );
 
-            new Chart(document.getElementById('deviceChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(devices),
-                    datasets: [{
-                        data: Object.values(devices),
-                        backgroundColor: ['#ff7043', '#42a5f5']
-                    }]
-                },
-                options: { plugins: { legend: { labels: { color: '#fff' } } } }
-            });
-        }
+            if (isConfirmed) {
+                const resetBtn = document.getElementById('resetBtn');
+                resetBtn.innerText = "⏳ กำลังลบข้อมูล...";
+                resetBtn.disabled = true;
+                resetBtn.style.backgroundColor = "#555";
 
-        // 4. กราฟเวลา (Line Chart)
-        function renderTimeChart(data) {
-            const timeline = {};
-            data.forEach(item => {
-                const date = item.start_time.split('T')[0];
-                timeline[date] = (timeline[date] || 0) + 1;
-            });
+                try {
+                    // ลบข้อมูลใน Collection: checkins
+                    const checkinsSnap = await getDocs(collection(db, "checkins"));
+                    const deleteCheckinsPromises = checkinsSnap.docs.map(d => deleteDoc(doc(db, "checkins", d.id)));
+                    await Promise.all(deleteCheckinsPromises);
 
-            const sortedDates = Object.keys(timeline).sort();
+                    // ลบข้อมูลใน Collection: visitor_logs
+                    const visitorsSnap = await getDocs(collection(db, "visitor_logs"));
+                    const deleteVisitorsPromises = visitorsSnap.docs.map(d => deleteDoc(doc(db, "visitor_logs", d.id)));
+                    await Promise.all(deleteVisitorsPromises);
 
-            new Chart(document.getElementById('timeChart'), {
-                type: 'line',
-                data: {
-                    labels: sortedDates,
-                    datasets: [{
-                        label: 'จำนวนผู้เข้าชม',
-                        data: sortedDates.map(d => timeline[d]),
-                        borderColor: '#ff7043',
-                        tension: 0.3,
-                        fill: true,
-                        backgroundColor: 'rgba(255, 112, 67, 0.1)'
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { ticks: { color: '#fff' }, grid: { color: '#333' } },
-                        x: { ticks: { color: '#fff' }, grid: { color: '#333' } }
-                    },
-                    plugins: { legend: { labels: { color: '#fff' } } }
+                    alert("✅ ลบข้อมูลรายงานทั้งหมดสำเร็จแล้ว");
+                    window.location.reload(); // โหลดหน้าใหม่เพื่ออัปเดตตัวเลขเป็น 0
+                } catch (error) {
+                    console.error("Error deleting data: ", error);
+                    alert("❌ เกิดข้อผิดพลาดขณะลบข้อมูล");
+                    resetBtn.innerText = "⚠️ ลบข้อมูลรายงานทั้งหมด";
+                    resetBtn.disabled = false;
+                    resetBtn.style.backgroundColor = "var(--danger)";
                 }
-            });
+            }
         }
 
-        loadDashboardData();
+        // ผูก Event ให้กับปุ่ม Reset
+        document.getElementById('resetBtn').addEventListener('click', resetAllData);
+
+        // เริ่มต้นทำงานทันทีเมื่อเปิดหน้านี้
+        loadDashboard();
     </script>
 </body>
 </html>

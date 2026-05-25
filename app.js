@@ -156,7 +156,7 @@ function startTracking() {
             locations.forEach(loc => {
                 const distance = getDistance(currentLat, currentLng, parseFloat(loc.lat), parseFloat(loc.lng));
                 
-                // หาจุดที่ใกล้ที่สุดเสมอ สำหรับชี้ลูกศรและคำนวณระยะทาง
+                // หาจุดที่ใกล้ที่สุดเสมอ สำหรับชี้เป้าลูกศร, ชื่อสถานที่, และระยะทาง
                 if (distance < minAbsoluteDistance) {
                     minAbsoluteDistance = distance;
                     absoluteNearestLoc = loc;
@@ -176,12 +176,18 @@ function startTracking() {
                 }
             });
 
-            // อัปเดตลูกศรและตัวเลขระยะทาง
+            // อัปเดตลูกศร ชื่อเป้าหมาย และตัวเลขระยะทาง
             if (absoluteNearestLoc) {
                 targetLat = parseFloat(absoluteNearestLoc.lat);
                 targetLng = parseFloat(absoluteNearestLoc.lng);
                 updateArrow(); 
                 
+                // ดึงชื่อสถานที่ (ลองดึงจาก name_th, name, หรือ title_th)
+                const nameEl = document.getElementById('targetName');
+                if (nameEl) {
+                    nameEl.innerText = absoluteNearestLoc.name_th || absoluteNearestLoc.name || absoluteNearestLoc.title_th || "จุดนิทรรศการ";
+                }
+
                 const distEl = document.getElementById('distanceValue');
                 if (distEl) {
                     if (minAbsoluteDistance >= 1000) {

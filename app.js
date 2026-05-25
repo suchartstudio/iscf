@@ -1,20 +1,24 @@
-// Import Firebase Functions 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+// Import Firebase Functions (อัปเดตเป็น v12.13.0)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getFirestore, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
 
-// Firebase Config ของคุณ
+// Firebase Config โปรเจกต์ใหม่
 const firebaseConfig = {
-    apiKey: "AIzaSyCJ-E8bN9nz_BWKTNofz7ccuVoo6m8LyAU",
-    authDomain: "suchart-915bd.firebaseapp.com",
-    projectId: "suchart-915bd",
-    storageBucket: "suchart-915bd.firebasestorage.app",
-    messagingSenderId: "94380768305",
-    appId: "1:94380768305:web:c4705ea3e0d53e1b61a910",
-    measurementId: "G-2LNYQS3M52"
+    apiKey: "AIzaSyDMptdLpLEdbeVFKZj82M0gyoV2m_2y5Pk",
+    authDomain: "suchartstudio-9a78d.firebaseapp.com",
+    databaseURL: "https://suchartstudio-9a78d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "suchartstudio-9a78d",
+    storageBucket: "suchartstudio-9a78d.firebasestorage.app",
+    messagingSenderId: "953369646185",
+    appId: "1:953369646185:web:33c814ecf964b7c96ebef8",
+    measurementId: "G-BPSW8BJCTQ"
 };
 
+// Initialize Firebase, Firestore และ Analytics
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const analytics = getAnalytics(app);
 
 // Google Sheet Setup
 const SHEET_ID = '1WQ790i1c8STFzWZEDtuK_NXg202lqEIh4OHfQ8qYGHo'; 

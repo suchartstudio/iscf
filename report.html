@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Khon Kaen Smart Guide</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #ff7043;
+            --text-main: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary);
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* สำหรับหน้าจอใหญ่ ให้แผนที่กินพื้นที่ 2 คอลัมน์ */
+        .wide-card {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 768px) {
+            .wide-card { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Visitor Analytics Dashboard</h1>
+        <p>ข้อมูลการเข้าชมและพิกัดผู้ใช้งานระบบ</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-title">สรุปข้อมูลทั่วไป</div>
+            <p>จำนวนผู้เข้าใช้งานทั้งหมด</p>
+            <div id="totalVisitors" class="stat-val">0</div>
+            <p style="margin-top:20px">ระยะเวลาใช้งานเฉลี่ย (นาที)</p>
+            <div id="avgDuration" class="stat-val">0</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">อุปกรณ์ที่ใช้งาน (Browsers)</div>
+            <canvas id="deviceChart"></canvas>
+        </div>
+
+        <div class="card wide-card">
+            <div class="card-title">แผนที่พิกัดผู้ใช้งานล่าสุด</div>
+            <div id="map"></div>
+        </div>
+
+        <div class="card wide-card">
+            <div class="card-title">สถิติการเข้าใช้งานรายวัน</div>
+            <canvas id="timeChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ-E8bN9nz_BWKTNofz7ccuVoo6m8LyAU",
+            authDomain: "suchart-915bd.firebaseapp.com",
+            projectId: "suchart-915bd",
+            storageBucket: "suchart-915bd.firebasestorage.app",
+            messagingSenderId: "94380768305",
+            appId: "1:94380768305:web:c4705ea3e0d53e1b61a910",
+            measurementId: "G-2LNYQS3M52"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ตั้งค่าแผนที่ Leaflet
+        const map = L.map('map').setView([16.4322, 102.8236], 13); // กลางขอนแก่น
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        async function loadDashboardData() {
+            const querySnapshot = await getDocs(collection(db, "visitor_logs"));
+            const data = [];
+            querySnapshot.forEach((doc) => data.push(doc.data()));
+
+            updateStats(data);
+            renderDeviceChart(data);
+            renderTimeChart(data);
+            renderMapMarkers(data);
+        }
+
+        // 1. อัปเดตตัวเลขสถิติ
+       function updateStats(data) {
+    document.getElementById('totalVisitors').innerText = data.length;
+    
+    // ถ้ายังไม่มีคนเข้าใช้งานเลย ให้แสดง 0
+    if (data.length === 0) {
+        document.getElementById('avgDuration').innerText = "0.0";
+        return;
+    }
+
+    // รวมเวลาทั้งหมด (หน่วยเป็นวินาที)
+    const totalSeconds = data.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0);
+    
+    // หาค่าเฉลี่ยเป็นวินาที
+    const avgSeconds = totalSeconds / data.length;
+    
+    // แปลงวินาทีเป็นนาที (หาร 60)
+    const avgMinutes = avgSeconds / 60;
+    
+    // แสดงผลทศนิยม 1 ตำแหน่ง (เช่น 1.5 นาที)
+    document.getElementById('avgDuration').innerText = avgMinutes.toFixed(1);
+}
+
+        // 2. แผนที่แสดงจุดที่ผู้ใช้อยู่
+        function renderMapMarkers(data) {
+            data.forEach(item => {
+                if (item.last_lat && item.last_lng) {
+                    L.circleMarker([item.last_lat, item.last_lng], {
+                        radius: 8,
+                        fillColor: "#ff7043",
+                        color: "#fff",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup(`อุปกรณ์: ${item.device_info.split(')')[0] + ')'}`);
+                }
+            });
+        }
+
+        // 3. กราฟอุปกรณ์ (Pie Chart)
+        function renderDeviceChart(data) {
+            const devices = {};
+            data.forEach(item => {
+                const name = item.device_info.includes("Mobi") ? "Mobile" : "Desktop";
+                devices[name] = (devices[name] || 0) + 1;
+            });
+
+            new Chart(document.getElementById('deviceChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(devices),
+                    datasets: [{
+                        data: Object.values(devices),
+                        backgroundColor: ['#ff7043', '#42a5f5']
+                    }]
+                },
+                options: { plugins: { legend: { labels: { color: '#fff' } } } }
+            });
+        }
+
+        // 4. กราฟเวลา (Line Chart)
+        function renderTimeChart(data) {
+            const timeline = {};
+            data.forEach(item => {
+                const date = item.start_time.split('T')[0];
+                timeline[date] = (timeline[date] || 0) + 1;
+            });
+
+            const sortedDates = Object.keys(timeline).sort();
+
+            new Chart(document.getElementById('timeChart'), {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'จำนวนผู้เข้าชม',
+                        data: sortedDates.map(d => timeline[d]),
+                        borderColor: '#ff7043',
+                        tension: 0.3,
+                        fill: true,
+                        backgroundColor: 'rgba(255, 112, 67, 0.1)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { ticks: { color: '#fff' }, grid: { color: '#333' } },
+                        x: { ticks: { color: '#fff' }, grid: { color: '#333' } }
+                    },
+                    plugins: { legend: { labels: { color: '#fff' } } }
+                }
+            });
+        }
+
+        loadDashboardData();
+    </script>
+</body>
+</html>

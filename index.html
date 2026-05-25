@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khon Kaen Smart Guide - Dark Mode</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Prompt:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            text-align: center; 
+            padding: 20px; 
+            background-color: #121212; 
+            margin: 0;
+            color: #e0e0e0; 
+            transition: background-color 0.3s;
+        }
+        .container {
+            max-width: 500px;
+            margin: 20px auto;
+            background: #1e1e1e; 
+            padding: 40px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+            transition: background-color 0.3s;
+        }
+
+        /* ----------------------------------- */
+        /* 1. อนิเมชันเรดาร์ (Radar Pulse)     */
+        /* ----------------------------------- */
+        .radar-container {
+            position: relative;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            height: 220px; 
+        }
+        
+        .logo {
+            position: relative;
+            z-index: 2; 
+            width: 100%;
+            max-width: 180px;
+            height: auto;
+        }
+
+        .radar-pulse {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            background: rgba(34, 184, 0, 0.3);
+            border-radius: 50%;
+            z-index: 1;
+            display: none; 
+        }
+
+        .radar-container.active .radar-pulse {
+            display: block;
+            animation: pulse 2s infinite ease-out;
+        }
+
+        .radar-container.active .radar-pulse:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+
+        /* ----------------------------------- */
+        /* 2. เข็มทิศนำทาง (Minimal Compass)   */
+        /* ----------------------------------- */
+        .compass-container {
+            margin: 10px auto;
+            width: 90px;
+            height: 90px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        .compass-container.active {
+            display: flex;
+        }
+
+        #navArrow {
+            transition: transform 0.3s ease-out; 
+            transform: rotate(0deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #navArrow svg {
+            width: 40px;
+            height: 40px;
+            color: #22b800;
+        }
+
+        /* ----------------------------------- */
+        /* 3. ข้อความแสดงระยะทาง                */
+        /* ----------------------------------- */
+        .distance-text {
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 20px;
+            color: #a5d6a7; 
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .distance-text.active {
+            display: block;
+        }
+
+        /* ----------------------------------- */
+        /* 4. ป้ายแสดงความคืบหน้า (Progress)     */
+        /* ----------------------------------- */
+        .progress-container {
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 18px;
+            color: #ffffff;
+            background: rgba(34, 184, 0, 0.2);
+            border: 1px solid rgba(34, 184, 0, 0.5);
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: none; 
+            margin: 0 auto 25px auto;
+            width: fit-content;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .progress-container.active {
+            display: block;
+        }
+        
+        .progress-highlight {
+            color: #a5d6a7;
+            font-weight: 600;
+            font-size: 24px;
+        }
+
+        /* ----------------------------------- */
+        /* 5. อนิเมชันกระพริบตอนเจอพิกัด       */
+        /* ----------------------------------- */
+        @keyframes flash-green {
+            0% { background-color: #121212; }
+            25% { background-color: #22b800; } 
+            50% { background-color: #121212; }
+            75% { background-color: #22b800; } 
+            100% { background-color: #121212; }
+        }
+        
+        @keyframes flash-container-green {
+            0% { background-color: #1e1e1e; }
+            25% { background-color: #2e7d32; } 
+            50% { background-color: #1e1e1e; }
+            75% { background-color: #2e7d32; } 
+            100% { background-color: #1e1e1e; }
+        }
+
+        body.found-location { animation: flash-green 1.5s ease-in-out; }
+        .container.found-location { animation: flash-container-green 1.5s ease-in-out; }
+
+        /* ----------------------------------- */
+        /* UI Components                       */
+        /* ----------------------------------- */
+        h1 { font-family: 'Chakra Petch', sans-serif; font-size: 32px; font-weight: 600; margin-top: 0; margin-bottom: 10px; color: #ffffff; }
+        p { font-size: 16px; line-height: 1.5; color: #cccccc; margin-bottom: 20px; }
+        .warning-box { background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; color: #ffd54f; padding: 15px; border-radius: 12px; font-size: 14px; margin-bottom: 25px; text-align: left; line-height: 1.5; }
+        #startBtn { width: 100%; padding: 20px; font-size: 22px; font-family: 'Prompt', sans-serif; font-weight: 600; background: #ff7043; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 15px rgba(255, 112, 67, 0.25); transition: transform 0.2s, background 0.2s; }
+        #startBtn:active { transform: scale(0.98); background: #f4511e; }
+        #status { margin-top: 20px; font-size: 16px; color: #aaaaaa; padding: 15px; background: #2c2c2c; border: 1px solid #444; border-radius: 12px; min-height: 80px; display: flex; align-items: center; justify-content: center; flex-direction: column; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="main-container">
+        
+        <div class="radar-container" id="radarWrap">
+            <div class="radar-pulse"></div>
+            <div class="radar-pulse"></div>
+            <img src="bussing.png" alt="Bussing Transit Logo" class="logo">
+        </div>
+        
+        <div class="compass-container" id="compassWrap">
+            <div id="navArrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5"></line>
+                    <polyline points="5 12 12 5 19 12"></polyline>
+                </svg>
+            </div> 
+        </div>
+
+        <div class="distance-text" id="distanceDisplay">
+            เป้าหมาย: <span id="distanceValue">-- ม.</span>
+        </div>
+
+        <div class="progress-container" id="progressWrap">
+            📍 สำรวจแล้ว: <span id="visitedCount" class="progress-highlight">0</span> / <span id="totalCount">0</span> จุด
+        </div>
+        
+        <h1>เว่าให้ฟังแหน่</h1>
+        <p>ระบบจะบรรยายนิทรรศการอัตโนมัติ<br>เมื่อเข้าใกล้ในระยะ 50 เมตร</p>
+
+        <div class="warning-box">
+            ⚠️ <b>คำแนะนำ:</b> กรุณาเปิดหน้าจอนี้ทิ้งไว้เพื่อให้ระบบ GPS ทำงาน ระบบนำทางด้วยเข็มทิศจำเป็นต้องใช้งานผ่านลิงก์ HTTPS เท่านั้น
+        </div>
+        
+        <button id="startBtn">📍 เริ่มต้นนำทาง</button>
+        
+        <div id="status">รอการเริ่มต้น...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

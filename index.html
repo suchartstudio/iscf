@@ -126,22 +126,64 @@
         }
         
         .target-name {
-            color: #ffcc80; /* สีส้มอ่อนให้เด่นชัดขึ้น */
+            color: #ffcc80; 
             font-size: 24px;
             display: block;
             margin-bottom: 4px;
         }
 
         /* ----------------------------------- */
-        /* 4. ป้ายแสดงความคืบหน้า (Progress)     */
+        /* 4. ปุ่มเช็คอินสถานที่ (Check-in Button) */
+        /* ----------------------------------- */
+        .checkin-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-family: 'Prompt', sans-serif;
+            font-weight: 600;
+            background: #2e7d32; /* สีเขียวเข้มสไตล์มินิมอลแต่เด่นชัด */
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
+            margin: 10px 0 25px 0;
+            display: none; 
+            transition: all 0.2s;
+        }
+
+        .checkin-btn.active {
+            display: block;
+            animation: bounceIn 0.5s ease-out;
+        }
+
+        .checkin-btn:active {
+            transform: scale(0.98);
+        }
+
+        .checkin-btn:disabled {
+            background: #455a64;
+            color: #b0bec5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            70% { transform: scale(1.03); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* ----------------------------------- */
+        /* 5. ป้ายแสดงความคืบหน้า (Progress)     */
         /* ----------------------------------- */
         .progress-container {
             font-family: 'Chakra Petch', sans-serif;
-            font-size: 18px;
+            font-size: 16px;
             color: #ffffff;
-            background: rgba(34, 184, 0, 0.2);
-            border: 1px solid rgba(34, 184, 0, 0.5);
-            padding: 8px 20px;
+            background: rgba(34, 184, 0, 0.15);
+            border: 1px solid rgba(34, 184, 0, 0.4);
+            padding: 6px 18px;
             border-radius: 30px;
             display: none; 
             margin: 0 auto 25px auto;
@@ -156,11 +198,11 @@
         .progress-highlight {
             color: #a5d6a7;
             font-weight: 600;
-            font-size: 24px;
+            font-size: 22px;
         }
 
         /* ----------------------------------- */
-        /* 5. อนิเมชันกระพริบตอนเจอพิกัด       */
+        /* 6. อนิเมชันกระพริบตอนเจอพิกัด       */
         /* ----------------------------------- */
         @keyframes flash-green {
             0% { background-color: #121212; }
@@ -216,6 +258,8 @@
             ระยะทาง: <span id="distanceValue">-- ม.</span>
         </div>
 
+        <button id="checkInBtn" class="checkin-btn">📌 กดเพื่อเช็คอินสถานที่นี้</button>
+
         <div class="progress-container" id="progressWrap">
             📍 สำรวจแล้ว: <span id="visitedCount" class="progress-highlight">0</span> / <span id="totalCount">0</span> จุด
         </div>
@@ -224,7 +268,7 @@
         <p>ระบบจะบรรยายนิทรรศการอัตโนมัติ<br>เมื่อเข้าใกล้ในระยะ 50 เมตร</p>
 
         <div class="warning-box">
-            ⚠️ <b>คำแนะนำ:</b> กรุณาเปิดหน้าจอนี้ทิ้งไว้เพื่อให้ระบบ GPS ทำงาน ระบบนำทางด้วยเข็มทิศจำเป็นต้องใช้งานผ่านลิงก์ HTTPS เท่านั้น
+            ⚠️ <b>คำแนะนำ:</b> กรุณาเปิดหน้าจอนี้ทิ้งไว้เพื่อให้ระบบ GPS ทำงาน ระบบนำทางด้วยเข็มทิศและปุ่มเช็คอินจำเป็นต้องใช้งานผ่านลิงก์ HTTPS เท่านั้น
         </div>
         
         <button id="startBtn">📍 เริ่มต้นนำทาง</button>

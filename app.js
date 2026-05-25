@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import { getFirestore, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
-// Firebase Config
+// Firebase Config ของคุณ
 const firebaseConfig = {
     apiKey: "AIzaSyCJ-E8bN9nz_BWKTNofz7ccuVoo6m8LyAU",
     authDomain: "suchart-915bd.firebaseapp.com",
@@ -21,22 +21,24 @@ const SHEET_ID = '1W2Yj2aR6dsv0GHOIYwIPA-B9d9RAN9jOgKoDAXkbb70';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
 let locations = [];
-let announcedPlaces = new Set(); // สำหรับจัดการการอ่านเสียง (ลบได้เมื่อห่าง 80m)
-let visitedPlaces = new Set();   // สำหรับนับความคืบหน้า (จำถาวรในเซสชันนี้)
+let announcedPlaces = new Set(); // จัดการการอ่านเสียงสปีช (ลบเมื่อห่างเกิน 80m)
+let visitedPlaces = new Set();   // จัดการความคืบหน้า Progress บน UI (จำถาวรในหน้านั้น)
+let checkedInPlaces = new Set(); // จัดการประวัติการกดปุ่มเช็คอิน ป้องกันการส่งขึ้น Firebase ซ้ำ
 let watchId = null;
 
-// Firebase Session
+// Firebase Session และพิกัดปัจจุบัน
 let sessionDocRef = null;
 let sessionStartTime = null;
 let currentLat = null;
 let currentLng = null;
 
-// Compass & Navigation
+// เข็มทิศนำทางและตัวแปรเช็คอิน
 let currentHeading = 0;
 let targetLat = null;
 let targetLng = null;
+let activeCheckInLocation = null; // เก็บข้อมูลสถานที่ปัจจุบันที่สามารถกดเช็คอินได้
 
-// โหลดข้อมูล
+// โหลดข้อมูลจาก Google Sheet
 function fetchLocations() {
     Papa.parse(CSV_URL, {
         download: true,
@@ -45,7 +47,6 @@ function fetchLocations() {
             locations = results.data.filter(loc => loc.lat && loc.lng);
             document.getElementById('status').innerText = `โหลดข้อมูลพร้อมแล้ว ${locations.length} จุด`;
             
-            // อัปเดตตัวเลขจำนวนจุดทั้งหมด
             const totalEl = document.getElementById('totalCount');
             if(totalEl) totalEl.innerText = locations.length;
         },
@@ -55,7 +56,7 @@ function fetchLocations() {
     });
 }
 
-// คำนวณระยะทาง
+// คำนวณระยะทางทางภูมิศาสตร์ (Haversine Formula)
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI/180;
@@ -67,7 +68,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c; 
 }
 
-// คำนวณองศาทิศทาง
+// คำนวณองศาทิศทางระหว่างพิกัดสองจุด (Bearing Angle)
 function getBearing(lat1, lon1, lat2, lon2) {
     const toRad = Math.PI / 180;
     const toDeg = 180 / Math.PI;
@@ -80,7 +81,7 @@ function getBearing(lat1, lon1, lat2, lon2) {
     return (bearing + 360) % 360; 
 }
 
-// หมุนลูกศร
+// อัปเดตและหมุนหัวลูกศรทิศทางนำทาง
 function updateArrow() {
     if (targetLat === null || targetLng === null || currentLat === null || currentLng === null) return;
     const bearing = getBearing(currentLat, currentLng, targetLat, targetLng);
@@ -91,7 +92,7 @@ function updateArrow() {
     }
 }
 
-// ระบบพูดออกเสียง
+// ระบบเสียงพูดสังเคราะห์ Text-to-Speech (3 ภาษา)
 function speak(text, lang) {
     if (!text) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -100,7 +101,7 @@ function speak(text, lang) {
     window.speechSynthesis.speak(utterance);
 }
 
-// บันทึก Firebase
+// สร้างเซสชันบันทึกข้อมูลหลักลงใน Firebase
 async function startFirebaseSession() {
     sessionStartTime = new Date();
     try {
@@ -113,10 +114,11 @@ async function startFirebaseSession() {
         });
         sessionDocRef = docRef;
     } catch (e) {
-        console.error("Firebase Error: ", e);
+        console.error("Firebase Connection Error: ", e);
     }
 }
 
+// ซิงค์พิกัดผู้ใช้ลงเซสชันฐานข้อมูลหลักทุกๆ 15 วินาที
 setInterval(async () => {
     if (sessionDocRef && currentLat && currentLng && sessionStartTime) {
         const duration = Math.floor((new Date() - sessionStartTime) / 1000); 
@@ -130,14 +132,14 @@ setInterval(async () => {
     }
 }, 15000);
 
-// เริ่มเช็คพิกัด
+// เริ่มการติดตามตำแหน่ง (Geolocation API)
 function startTracking() {
     if (!navigator.geolocation) {
-        alert("เบราว์เซอร์ไม่รองรับ GPS");
+        alert("เบราว์เซอร์ไม่รองรับระบบระบุตำแหน่ง GPS");
         return;
     }
 
-    document.getElementById('status').innerText = "กำลังค้นหาตำแหน่ง...";
+    document.getElementById('status').innerText = "กำลังค้นหาตำแหน่งของท่าน...";
     speak(" ", "th-TH");
     startFirebaseSession();
 
@@ -156,13 +158,13 @@ function startTracking() {
             locations.forEach(loc => {
                 const distance = getDistance(currentLat, currentLng, parseFloat(loc.lat), parseFloat(loc.lng));
                 
-                // หาจุดที่ใกล้ที่สุดเสมอ สำหรับชี้เป้าลูกศร, ชื่อสถานที่, และระยะทาง
+                // ค้นหาจุดนิทรรศการที่ใกล้ที่สุดในทุกๆ พื้นที่ เพื่อบอกระยะทางและทิศทาง
                 if (distance < minAbsoluteDistance) {
                     minAbsoluteDistance = distance;
                     absoluteNearestLoc = loc;
                 }
                 
-                // เช็คระยะ 50 เมตรเพื่อเตรียมอ่านออกเสียง
+                // ตรวจสอบพื้นที่ในระยะรัศมีเป้าหมาย 50 เมตร
                 if (distance <= 50) {
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -170,22 +172,22 @@ function startTracking() {
                     }
                 }
                 
-                // ล้างความจำเสียงเมื่อห่างเกิน 80 เมตร (เพื่อให้กลับมาฟังซ้ำได้)
+                // ล้างสถานะคิวเสียงอ่านสปีชเมื่อผู้ใช้ออกจากรัศมี 80 เมตร
                 if (distance > 80 && announcedPlaces.has(loc.id)) {
                     announcedPlaces.delete(loc.id);
                 }
             });
 
-            // อัปเดตลูกศร ชื่อเป้าหมาย และตัวเลขระยะทาง
+            // อัปเดตลูกศรนำทาง, ชื่อสถานที่ และตัวเลขระยะทางแบบเรียลไทม์
             if (absoluteNearestLoc) {
                 targetLat = parseFloat(absoluteNearestLoc.lat);
                 targetLng = parseFloat(absoluteNearestLoc.lng);
                 updateArrow(); 
                 
-                // ดึงชื่อสถานที่ (ลองดึงจาก name_th, name, หรือ title_th)
                 const nameEl = document.getElementById('targetName');
                 if (nameEl) {
-                    nameEl.innerText = absoluteNearestLoc.name_th || absoluteNearestLoc.name || absoluteNearestLoc.title_th || "จุดนิทรรศการ";
+                    window.currentTargetNameString = absoluteNearestLoc.name_th || absoluteNearestLoc.name || absoluteNearestLoc.title_th || "จุดกิจกรรม";
+                    nameEl.innerText = window.currentTargetNameString;
                 }
 
                 const distEl = document.getElementById('distanceValue');
@@ -198,42 +200,99 @@ function startTracking() {
                 }
             }
 
-            // จัดการแจ้งเตือนเสียง, พื้นหลังกระพริบ, และนับ Progress
-            if (closestLocation && !announcedPlaces.has(closestLocation.id)) {
+            // จัดการเมื่อผู้ใช้เข้าสู่รัศมี 50 เมตร (เริ่มสปีชเสียงพูด + แสดงปุ่มเช็คอิน)
+            if (closestLocation) {
+                activeCheckInLocation = closestLocation;
+                const checkInBtn = document.getElementById('checkInBtn');
                 
-                announcedPlaces.add(closestLocation.id); 
-                
-                // เพิ่มการนับลงใน Progress แบบถาวร
-                visitedPlaces.add(closestLocation.id);
-                const visitedEl = document.getElementById('visitedCount');
-                if(visitedEl) visitedEl.innerText = visitedPlaces.size;
+                if (checkInBtn && !checkInBtn.classList.contains('active')) {
+                    const locName = closestLocation.name_th || closestLocation.name || closestLocation.title_th || "จุดกิจกรรม";
+                    
+                    // ปรับเปลี่ยนข้อความบนปุ่มกดและเปิดปุ่มขึ้นมา
+                    if (checkedInPlaces.has(closestLocation.id)) {
+                        checkInBtn.innerText = "🎉 เช็คอินสำเร็จแล้ว!";
+                        checkInBtn.disabled = true;
+                    } else {
+                        checkInBtn.innerText = `✅ กดเพื่อเช็คอินที่: ${locName}`;
+                        checkInBtn.disabled = false;
+                    }
+                    checkInBtn.classList.add('active');
+                }
 
-                window.speechSynthesis.cancel(); 
-                
-                document.body.classList.add('found-location');
-                document.getElementById('main-container').classList.add('found-location');
-                
-                setTimeout(() => {
-                    document.body.classList.remove('found-location');
-                    document.getElementById('main-container').classList.remove('found-location');
-                }, 1500);
-                
-                speak(closestLocation.info_th, 'th-TH');
-                speak(closestLocation.info_en, 'en-US');
-                speak(closestLocation.info_cn, 'zh-CN');
+                // จัดการเรื่องการแจ้งเตือนเสียงสปีชและเอฟเฟกต์หน้าจอกระพริบ
+                if (!announcedPlaces.has(closestLocation.id)) {
+                    announcedPlaces.add(closestLocation.id); 
+                    
+                    visitedPlaces.add(closestLocation.id);
+                    const visitedEl = document.getElementById('visitedCount');
+                    if(visitedEl) visitedEl.innerText = visitedPlaces.size;
+
+                    window.speechSynthesis.cancel(); 
+                    
+                    document.body.classList.add('found-location');
+                    document.getElementById('main-container').classList.add('found-location');
+                    
+                    setTimeout(() => {
+                        document.body.classList.remove('found-location');
+                        document.getElementById('main-container').classList.remove('found-location');
+                    }, 1500);
+                    
+                    speak(closestLocation.info_th, 'th-TH');
+                    speak(closestLocation.info_en, 'en-US');
+                    speak(closestLocation.info_cn, 'zh-CN');
+                }
+            } else {
+                // หากไม่ได้อยู่ในรัศมีกิจกรรม 50 เมตรของจุดใดเลย ให้ซ่อนปุ่มเช็คอินออกไป
+                activeCheckInLocation = null;
+                const checkInBtn = document.getElementById('checkInBtn');
+                if (checkInBtn) {
+                    checkInBtn.classList.remove('active');
+                }
             }
         },
         (error) => {
-            document.getElementById('status').innerText = "ไม่สามารถระบุตำแหน่งได้ กรุณาเปิด GPS";
+            document.getElementById('status').innerText = "โปรดอนุญาตและเปิดระบบระบุตำแหน่ง GPS";
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
     );
 }
 
-// ทำงานเมื่อกดปุ่มเริ่ม
+// สั่งงานพฤติกรรมเมื่อคลิกปุ่มเช็คอินสถานที่นิทรรศการ
+document.getElementById('checkInBtn').addEventListener('click', async () => {
+    if (!activeCheckInLocation) return;
+    
+    const checkInBtn = document.getElementById('checkInBtn');
+    checkInBtn.disabled = true;
+    checkInBtn.innerText = "⏳ กำลังบันทึกการเช็คอิน...";
+
+    const locId = activeCheckInLocation.id;
+    const locName = activeCheckInLocation.name_th || activeCheckInLocation.name || activeCheckInLocation.title_th || "ไม่ระบุชื่อ";
+
+    try {
+        // บันทึกประวัติส่งไปคอลเลกชันฐานข้อมูล Firebase (Firestore) แยกเป็นเอกเทศ
+        await addDoc(collection(db, "checkins"), {
+            session_id: sessionDocRef ? sessionDocRef.id : "anonymous_session",
+            location_id: locId,
+            location_name: locName,
+            timestamp: new Date().toISOString(),
+            checkin_lat: currentLat,
+            checkin_lng: currentLng
+        });
+
+        // จำเก็บค่าไว้ในเซสชันหน้านั้นถาวร เพื่อไม่ให้ผู้ใช้กดยิงซ้ำไปที่คอลเลกชันเดิมได้อีก
+        checkedInPlaces.add(locId);
+        checkInBtn.innerText = "🎉 เช็คอินสำเร็จแล้ว!";
+        
+    } catch (error) {
+        console.error("Firebase Store Checkin Error: ", error);
+        checkInBtn.innerText = "❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
+        checkInBtn.disabled = false;
+    }
+});
+
+// เปิดใช้งานองค์ประกอบ UI ระบบนำทางทั้งหมดเมื่อกดยืนยันปุ่มเริ่มต้น
 document.getElementById('startBtn').addEventListener('click', async () => {
     
-    // ซ่อนปุ่ม และเปิดแสดงองค์ประกอบ UI ทั้งหมด
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('compassWrap')?.classList.add('active');
     document.getElementById('radarWrap')?.classList.add('active');
@@ -248,7 +307,6 @@ document.getElementById('startBtn').addEventListener('click', async () => {
         }
     }
 
-    // ขออนุญาตใช้เข็มทิศ
     try {
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             const permissionState = await DeviceOrientationEvent.requestPermission();
@@ -260,11 +318,10 @@ document.getElementById('startBtn').addEventListener('click', async () => {
             window.addEventListener('deviceorientation', handleOrientation);
         }
     } catch (error) {
-        console.warn("ไม่สามารถใช้งานเข็มทิศได้ หรือไม่ได้รันบน HTTPS");
+        console.warn("ไม่สามารถตรวจจับฮาร์ดแวร์เข็มทิศได้เนื่องจากข้อจำกัดโปรโตคอล");
     }
 
     startTracking();
 });
 
-// เริ่มต้นดึงข้อมูลทันทีเมื่อเปิดหน้าเว็บ
 fetchLocations();

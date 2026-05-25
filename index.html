@@ -109,19 +109,27 @@
         }
 
         /* ----------------------------------- */
-        /* 3. ข้อความแสดงระยะทาง                */
+        /* 3. ชื่อเป้าหมายและระยะทาง            */
         /* ----------------------------------- */
         .distance-text {
             font-family: 'Chakra Petch', sans-serif;
-            font-size: 20px;
+            font-size: 18px;
             color: #a5d6a7; 
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             font-weight: 600;
             display: none;
+            line-height: 1.5;
         }
 
         .distance-text.active {
             display: block;
+        }
+        
+        .target-name {
+            color: #ffcc80; /* สีส้มอ่อนให้เด่นชัดขึ้น */
+            font-size: 24px;
+            display: block;
+            margin-bottom: 4px;
         }
 
         /* ----------------------------------- */
@@ -204,7 +212,8 @@
         </div>
 
         <div class="distance-text" id="distanceDisplay">
-            เป้าหมาย: <span id="distanceValue">-- ม.</span>
+            <span id="targetName" class="target-name">กำลังค้นหาเป้าหมาย...</span>
+            ระยะทาง: <span id="distanceValue">-- ม.</span>
         </div>
 
         <div class="progress-container" id="progressWrap">

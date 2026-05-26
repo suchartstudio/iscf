@@ -30,6 +30,9 @@ let visitedPlaces = new Set();
 let checkedInPlaces = new Set(); 
 let watchId = null;
 
+// เพิ่มตัวแปรสำหรับป้องกันการกดเช็คอินซ้ำ (Lock State)
+let isCheckingIn = false;
+
 // Firebase Session
 let sessionDocRef = null;
 let sessionStartTime = null;
@@ -179,7 +182,7 @@ function startTracking() {
                 }
             });
 
-            // อัปเดตลูกศรนำทาง
+            // อัปเดตลูกศรนำทางและระยะทาง
             if (absoluteNearestLoc) {
                 targetLat = parseFloat(absoluteNearestLoc.lat);
                 targetLng = parseFloat(absoluteNearestLoc.lng);
@@ -206,30 +209,26 @@ function startTracking() {
                 activeCheckInLocation = closestLocation;
                 const checkInBtn = document.getElementById('checkInBtn');
                 
-                if (checkInBtn) {
-                    // เปิดให้ปุ่มแสดงผล
+                // ตรวจสอบว่าระบบกำลังเช็คอินอยู่หรือไม่ ถ้าเช็คอินอยู่ห้าม GPS มายุ่งกับปุ่มเด็ดขาด
+                if (checkInBtn && !isCheckingIn) {
                     checkInBtn.classList.add('active');
                     const locName = closestLocation.name_th || closestLocation.name || closestLocation.title_th || "จุดกิจกรรม";
                     
-                    // --- แก้ไขบัคตรงนี้ ---
-                    // เช็คว่าจุดที่ยืนอยู่ตอนนี้ (closestLocation) ถูกเช็คอินหรือยัง
                     if (checkedInPlaces.has(closestLocation.id)) {
-                        // ถ้าจุดนี้เช็คอินแล้ว และปุ่มยังไม่เปลี่ยนข้อความ ก็สั่งเปลี่ยนและล็อกปุ่ม
                         if (checkInBtn.innerText !== "🎉 เช็คอินสำเร็จแล้ว!") {
                             checkInBtn.innerText = "🎉 เช็คอินสำเร็จแล้ว!";
                             checkInBtn.disabled = true;
                         }
                     } else {
-                        // ถ้าจุดนี้ "ยังไม่ได้เช็คอิน" ให้ปลดล็อกปุ่มและเปลี่ยนชื่อสถานที่รอให้กด
                         const targetText = `✅ กดเพื่อเช็คอินที่: ${locName}`;
                         if (checkInBtn.innerText !== targetText) {
                             checkInBtn.innerText = targetText;
                             checkInBtn.disabled = false;
                         }
                     }
-                    // --------------------
                 }
 
+                // จัดการเสียงพูดและการกระพริบหน้าจอ
                 if (!announcedPlaces.has(closestLocation.id)) {
                     announcedPlaces.add(closestLocation.id); 
                     
@@ -254,7 +253,7 @@ function startTracking() {
             } else {
                 activeCheckInLocation = null;
                 const checkInBtn = document.getElementById('checkInBtn');
-                if (checkInBtn) {
+                if (checkInBtn && !isCheckingIn) {
                     checkInBtn.classList.remove('active');
                 }
             }
@@ -268,7 +267,11 @@ function startTracking() {
 
 // เช็คอินสถานที่
 document.getElementById('checkInBtn').addEventListener('click', async () => {
-    if (!activeCheckInLocation) return;
+    // ป้องกันการกดซ้ำซ้อนถ้ากำลังเช็คอินอยู่
+    if (!activeCheckInLocation || isCheckingIn) return;
+    
+    // ล็อกสถานะทันทีเมื่อกดปุ่ม
+    isCheckingIn = true;
     
     const checkInBtn = document.getElementById('checkInBtn');
     checkInBtn.disabled = true;
@@ -287,7 +290,6 @@ document.getElementById('checkInBtn').addEventListener('click', async () => {
             checkin_lng: currentLng
         });
 
-        // บันทึก ID สถานที่นั้นๆ ว่าถูกเช็คอินไปแล้ว
         checkedInPlaces.add(locId);
         checkInBtn.innerText = "🎉 เช็คอินสำเร็จแล้ว!";
         
@@ -295,6 +297,9 @@ document.getElementById('checkInBtn').addEventListener('click', async () => {
         console.error("Firebase Store Checkin Error: ", error);
         checkInBtn.innerText = "❌ เกิดข้อผิดพลาด ลองใหม่อีกครั้ง";
         checkInBtn.disabled = false;
+    } finally {
+        // ปลดล็อกสถานะการเช็คอินเมื่อกระบวนการทุกอย่างเสร็จสิ้น
+        isCheckingIn = false;
     }
 });
 

@@ -209,6 +209,21 @@ function startTracking() {
                         distEl.innerText = Math.round(minAbsoluteDistance) + " ม.";
                     }
                 }
+
+                // --- เพิ่มโค้ดส่วนนี้: อัปเดตภาพหน้าปกของจุดที่อยู่ใกล้ที่สุด ---
+                const coverImgEl = document.getElementById('eventCover');
+                if (coverImgEl) {
+                    // ดึงลิงก์จากคอลัมน์ชื่อ image_url ใน Google Sheet
+                    const imageUrl = absoluteNearestLoc.image_url; 
+                    if (imageUrl) {
+                        coverImgEl.src = imageUrl;
+                        coverImgEl.style.display = 'block';
+                    } else {
+                        coverImgEl.style.display = 'none'; // ซ่อนรูปหากไม่ได้ใส่ลิงก์
+                    }
+                }
+                // -----------------------------------------------------
+
             } else {
                 // กรณีที่สำรวจครบหมดทุกจุดแล้ว (เช็คอินครบแล้ว)
                 if (compassWrap) compassWrap.classList.remove('active');
@@ -218,6 +233,11 @@ function startTracking() {
                 
                 const distEl = document.getElementById('distanceValue');
                 if (distEl) distEl.innerText = "-";
+
+                // --- เพิ่มโค้ดส่วนนี้: ซ่อนภาพเมื่อสำรวจครบหมดแล้ว ---
+                const coverImgEl = document.getElementById('eventCover');
+                if (coverImgEl) coverImgEl.style.display = 'none';
+                // ---------------------------------------------
             }
 
             // จัดการเมื่อผู้ใช้เข้าสู่รัศมี 50 เมตร ของจุดที่ยังไม่เช็คอิน
